@@ -36,14 +36,26 @@ const registerUser = async(req,res)=>{
     
         const savedUser = await userSchema.create({
             ...req.body,
+            email:req.body.email.toLowerCase(),
             password: hashedPassword
         })
 
+        // 🔹 Email content for welcome email
+    const mailHtml = `
+      <div style="font-family:Arial, sans-serif; text-align:center; padding:20px;">
+        <h2>Hey, ${savedUser.firstName}, 👋</h2>
+        <p>Thank you for registering with CarScout. Your journey to find the perfect car starts here!</p>
+        <a href="http://localhost:5173/" style="display:inline-block; padding:10px 20px; background-color:#007bff; color:white; border-radius:5px; text-decoration:none;">Explore Cars</a>
+      </div>
+    `;
+    
+     // send email using MailUtil
         try{
             await mailSend(
                 savedUser.email,
                 "Welcome To Car WebSite",
-                "Thank You For Registering With Our App."
+                "Thank You For Registering With Our App.",
+                mailHtml
             )
         }catch(mailErr){
             console.log("Mail Error:", mailErr.message)
@@ -63,7 +75,6 @@ const registerUser = async(req,res)=>{
     }
 }
 
-
 const loginUser = async(req,res)=>{
     try{
         const{email,password}=req.body
@@ -77,7 +88,8 @@ const loginUser = async(req,res)=>{
                     message:"Login Success",
                     //data:foundUserFromEmail, 
                     token:token,
-                    role:foundUserFromEmail.role
+                    role:foundUserFromEmail.role,
+                    user: foundUserFromEmail
                 })
             }
             else{
@@ -99,28 +111,38 @@ const loginUser = async(req,res)=>{
 }
 
 const forgotPassword = async(req,res)=>{
-    const {email}=req.body
+    const {email} = req.body;
     if(!email) return res.status(400).json({
         message:"Email is not provided"
-    })
-    const foundUserFromEmail = await userSchema.findOne({email:email})
+    });
+
+    const foundUserFromEmail = await userSchema.findOne({email:email});
     if(foundUserFromEmail){
-        const token = jwt.sign(foundUserFromEmail.toObject(),secret,{expiresIn:60*24*7}) //token generate
-        const url = `http://localhost:5173/resetpassword/${token}` //reset link
+        // 🔹 JWT token generate
+        const token = jwt.sign(foundUserFromEmail.toObject(), secret, {expiresIn: 60*24*7}); // 7 days
+        const url = `http://localhost:5173/resetpassword/${token}`; // reset link
         console.log("Reset Link:", url);
-        //send Email
-         const mailtext = `<html>
-            <a href ='${url}'>RESET PASSWORD</a>
-        </html>`
-        await mailSend(foundUserFromEmail.email,"Reset Password Link",mailtext)
+
+        // 🔹 Important change: HTML content for email
+        const mailHtml = `
+            <div style="font-family:Arial, sans-serif; text-align:center; padding:20px;">
+                <h2>Hi ${foundUserFromEmail.firstName},</h2>
+                <p>Click the link below to reset your password:</p>
+                <a href="${url}" style="display:inline-block; padding:10px 20px; background-color:#007bff; color:white; border-radius:5px; text-decoration:none;">RESET PASSWORD</a>
+                <p>If you did not request this, please ignore this email.</p>
+            </div>
+        `;
+
+        // 🔹 Send email using MailUtil
+        await mailSend(foundUserFromEmail.email, "Reset Password Link", mailHtml);
+
         res.status(200).json({
             message:"Reset link has been sent to your email"
-        })
-    }
-    else{
+        });
+    } else {
         res.status(404).json({
-            message:"user not found.."
-        })
+            message:"User not found.."
+        });
     }
 }
 

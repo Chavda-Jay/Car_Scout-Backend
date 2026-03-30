@@ -38,8 +38,19 @@ const createOffer = async (req, res) => {
 // ================= GET ALL OFFERS =================
 const getAllOffers = async (req, res) => {
   try {
-    const offers = await Offer.find()
-      .populate("buyerId sellerId carId");
+    const { buyerId } = req.query;
+
+    let offers;
+
+    // 🔥 If buyerId provided → filter
+    if (buyerId) {
+      offers = await Offer.find({ buyerId })
+        .populate("buyerId sellerId carId");
+    } else {
+      // 🔥 Otherwise → return all offers
+      offers = await Offer.find()
+        .populate("buyerId sellerId carId");
+    }
 
     res.status(200).json({
       data: offers
@@ -52,7 +63,6 @@ const getAllOffers = async (req, res) => {
     });
   }
 };
-
 // ================= GET SINGLE OFFER =================
 const getOfferById = async (req, res) => {
   try {

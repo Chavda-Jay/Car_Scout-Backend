@@ -47,7 +47,7 @@ const createCar = async (req, res) => {
     // ✅ validation
     if (!sellerId) {
       return res.status(400).json({
-        message: "SellerId is required ❌"
+        message: "SellerId is required"
       });
     }
 

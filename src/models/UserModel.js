@@ -13,7 +13,8 @@ const userSchema = new Schema({
     email:{
         type:String,
         required:true,
-        unique:true
+        unique:true,
+        lowercase:true
     },
     password:{
         type:String,
@@ -22,7 +23,7 @@ const userSchema = new Schema({
     role:{
         type:String,
         default:"user",
-        enum:["user","admin"]
+        enum:["user","admin","seller"] 
     },
     profilePic:{
         type:String,
