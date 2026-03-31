@@ -5,7 +5,7 @@ const Car = require("../models/CarModel");
 const createCar = async (req, res) => {
   try {
     console.log("BODY:", req.body);
-    console.log("FILE:", req.file);
+    console.log("FILES:", req.files); //Multiple files
 
     const {
       brand,
@@ -23,8 +23,15 @@ const createCar = async (req, res) => {
       return res.status(400).json({ message: "SellerId is required" });
     }
 
-    // 🔥 Cloudinary URL use karenge
-    const imageUrl = req.file ? req.file.path : ""; // multer-storage-cloudinary se ye URL milega
+    let imageUrls=[];
+
+    // Multiple Image URL Array
+    const imageUrl = []
+    if(req.files && req.files.length >0){
+        for(let file of req.files){
+            imageUrls.push(file.path)  //cloudinary url
+        }
+    }
 
     const car = await Car.create({
       brand,
@@ -36,7 +43,7 @@ const createCar = async (req, res) => {
       description,
       location,
       sellerId,
-      images: imageUrl, // ✅ Cloudinary URL save ho raha
+      images: imageUrls, // Array Save
     });
 
     res.status(201).json({

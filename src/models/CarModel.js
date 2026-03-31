@@ -46,18 +46,12 @@ const carSchema = new Schema({
         ref:"users"
     },
     
-    images:{                                //Ex: "images":["car1.jpg","car2.jpg"]
-            type:String,
-           // default:""
-    },                                     
-        //  Cloudinary use karega To :images:[
-        //                                    {
-        //                                      url:String,
-        //                                      public_id:String
-        //                                     }
-        //                                    ]     
-        
-        
+    images:[
+        {
+            type:String
+        }
+    ],  
+          
     status:{
         type:String,
         enum:["available","sold"],

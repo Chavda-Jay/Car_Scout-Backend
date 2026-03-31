@@ -17,8 +17,7 @@ const router = require("express").Router()
 const carController = require("../controllers/CarController")
 const upload = require("../middleware/Upload")
 
-router.post("/car", upload.single("image"), carController.createCar) //single image
-//router.post("/car",upload.array("images",5),carController.createCar)   //Max 5 Images
+router.post("/car",upload.array("images",5),carController.createCar)   //Max 5 Images
 router.get("/cars", carController.getAllCars)
 router.get("/:id", carController.getCarById)
 router.put("/:id", carController.updateCar)
