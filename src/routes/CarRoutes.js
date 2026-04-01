@@ -20,8 +20,11 @@ const upload = require("../middleware/Upload")
 router.post("/car",upload.array("images",5),carController.createCar)   //Max 5 Images
 router.get("/cars", carController.getAllCars)
 router.get("/:id", carController.getCarById)
-router.put("/:id", carController.updateCar)
-router.delete("/car/:id", carController.deleteCar)
+//router.put("/:id", carController.updateCar)
+router.put("/:id", upload.array("images",5), carController.updateCar)
+router.delete("/:id", carController.deleteCar)
+
+router.get("/user/:id", carController.getUserCars);
 
 module.exports = router
 
