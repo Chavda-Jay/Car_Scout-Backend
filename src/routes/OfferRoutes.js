@@ -7,4 +7,4 @@ router.get("/:id",offerController.getOfferById) ////localhost:3800/offer/offer/:
 router.put("/:id",offerController.updateOffer)      //localhost:3800/offer/:id
 router.delete("/:id",offerController.deleteOffer)   //localhost:3800/offer/:id
 
-module.exports = router
+module.exports = router  

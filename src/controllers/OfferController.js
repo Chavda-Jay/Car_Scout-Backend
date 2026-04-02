@@ -1,4 +1,5 @@
-const Offer = require("../models/OfferModel"); // ✅ clear naming
+const mongoose = require("mongoose"); 
+const Offer = require("../models/OfferModel"); 
 
 // ================= CREATE OFFER =================
 const createOffer = async (req, res) => {
@@ -38,19 +39,22 @@ const createOffer = async (req, res) => {
 // ================= GET ALL OFFERS =================
 const getAllOffers = async (req, res) => {
   try {
-    const { buyerId } = req.query;
+    const { buyerId, sellerId } = req.query;
 
-    let offers;
+    let filter = {};
 
-    // 🔥 If buyerId provided → filter
     if (buyerId) {
-      offers = await Offer.find({ buyerId })
-        .populate("buyerId sellerId carId");
-    } else {
-      // 🔥 Otherwise → return all offers
-      offers = await Offer.find()
-        .populate("buyerId sellerId carId");
+      filter.buyerId = buyerId; // ✅ direct use (no need ObjectId)
     }
+
+    if (sellerId) {
+      filter.sellerId = sellerId;
+    }
+
+    const offers = await Offer.find(filter)
+      .populate("buyerId")
+      .populate("sellerId")
+      .populate("carId");
 
     res.status(200).json({
       data: offers
@@ -90,13 +94,23 @@ const getOfferById = async (req, res) => {
 // ================= UPDATE OFFER =================
 const updateOffer = async (req, res) => {
   try {
+
+    const { status } = req.body;
+
+    // ❗ only valid status update
+    if (!["pending", "accepted", "rejected"].includes(status)) {
+      return res.status(400).json({
+        message: "Invalid status"
+      });
+    }
+
     const offer = await Offer.findByIdAndUpdate(
       req.params.id,
       {
-        ...req.body,
+        status,
         updatedAt: Date.now()
       },
-      { new: true } // ✅ FIX
+      { new: true }
     );
 
     res.status(200).json({

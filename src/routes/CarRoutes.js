@@ -12,19 +12,20 @@
 
 // module.exports = router
 
-
 const router = require("express").Router()
 const carController = require("../controllers/CarController")
 const upload = require("../middleware/Upload")
 
-router.post("/car",upload.array("images",5),carController.createCar)   //Max 5 Images
+//  CREATE CAR
+router.post("/car", upload.array("images",5), carController.createCar)
+// GET ALL CARS
 router.get("/cars", carController.getAllCars)
-router.get("/:id", carController.getCarById)
-//router.put("/:id", carController.updateCar)
+//  VERY IMPORTANT ORDER FIX
+router.get("/user/:id", carController.getUserCars); 
+router.get("/:id", carController.getCarById);       
+// UPDATE
 router.put("/:id", upload.array("images",5), carController.updateCar)
+//  DELETE
 router.delete("/:id", carController.deleteCar)
 
-router.get("/user/:id", carController.getUserCars);
-
 module.exports = router
-
