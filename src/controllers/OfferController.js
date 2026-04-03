@@ -6,7 +6,7 @@ const createOffer = async (req, res) => {
   try {
     console.log("BODY DATA:", req.body); // 🔥 debug
 
-    const { carId, buyerId, sellerId, offerPrice } = req.body;
+    const { carId, buyerId, sellerId, offerPrice,message } = req.body;
 
     // validation
     if (!carId || !buyerId || !sellerId || !offerPrice) {
@@ -20,7 +20,8 @@ const createOffer = async (req, res) => {
       carId,
       buyerId,
       sellerId,
-      offerPrice
+      offerPrice,
+      message
     });
 
     res.status(201).json({
@@ -54,8 +55,9 @@ const getAllOffers = async (req, res) => {
     const offers = await Offer.find(filter)
       .populate("buyerId")
       .populate("sellerId")
-      .populate("carId");
-
+      .populate("carId")
+      .sort({created: -1})  // latest offer sabse uper aayega...
+ 
     res.status(200).json({
       data: offers
     });
@@ -95,21 +97,31 @@ const getOfferById = async (req, res) => {
 const updateOffer = async (req, res) => {
   try {
 
-    const { status } = req.body;
+    const { status, counterOffer } = req.body;
 
-    // ❗ only valid status update
-    if (!["pending", "accepted", "rejected"].includes(status)) {
-      return res.status(400).json({
-        message: "Invalid status"
-      });
+    let updateData = {
+      updatedAt: Date.now()
+    };
+
+    // ✅ status update
+    if (status) {
+      if (!["pending", "accepted", "rejected"].includes(status)) {
+        return res.status(400).json({
+          message: "Invalid status"
+        });
+      }
+      updateData.status = status;
+    }
+
+    // ✅ counter offer update
+    if (counterOffer) {
+      updateData.counterOffer = counterOffer;
+      updateData.status = "pending"; // 🔥 important
     }
 
     const offer = await Offer.findByIdAndUpdate(
       req.params.id,
-      {
-        status,
-        updatedAt: Date.now()
-      },
+      updateData,
       { new: true }
     );
 
@@ -124,6 +136,8 @@ const updateOffer = async (req, res) => {
     });
   }
 };
+
+
 
 // ================= DELETE OFFER =================
 const deleteOffer = async (req, res) => {

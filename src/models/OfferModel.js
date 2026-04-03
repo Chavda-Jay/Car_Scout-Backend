@@ -26,6 +26,10 @@ const offerSchema = new Schema({
         type:Number
     },
 
+    message: {
+         type: String
+    },
+
     status:{
         type:String,
         enum:["pending","accepted","rejected"],
