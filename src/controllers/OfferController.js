@@ -1,21 +1,19 @@
-const mongoose = require("mongoose"); 
-const Offer = require("../models/OfferModel"); 
+const Offer = require("../models/OfferModel");
+const { createNotification } = require("../utils/notificationHelper");
 
 // ================= CREATE OFFER =================
 const createOffer = async (req, res) => {
   try {
-    console.log("BODY DATA:", req.body); // 🔥 debug
+    console.log("BODY DATA:", req.body);
 
-    const { carId, buyerId, sellerId, offerPrice,message } = req.body;
+    const { carId, buyerId, sellerId, offerPrice, message } = req.body;
 
-    // validation
     if (!carId || !buyerId || !sellerId || !offerPrice) {
       return res.status(400).json({
         message: "All fields are required!"
       });
     }
 
-    // create offer
     const offer = await Offer.create({
       carId,
       buyerId,
@@ -24,11 +22,21 @@ const createOffer = async (req, res) => {
       message
     });
 
-    res.status(201).json({
-      message: "Offer sent ✅",
-      data: offer
+    // Notify seller when buyer places a new offer
+    await createNotification({
+      userId: sellerId,
+      senderId: buyerId,
+      carId,
+      offerId: offer._id,
+      type: "new_offer",
+      title: "New Offer Received",
+      message: `A buyer has placed an offer of Rs. ${offerPrice} on your car.`
     });
 
+    res.status(201).json({
+      message: "Offer sent successfully",
+      data: offer
+    });
   } catch (err) {
     console.log("CREATE OFFER ERROR:", err);
     res.status(500).json({
@@ -41,11 +49,10 @@ const createOffer = async (req, res) => {
 const getAllOffers = async (req, res) => {
   try {
     const { buyerId, sellerId } = req.query;
-
     let filter = {};
 
     if (buyerId) {
-      filter.buyerId = buyerId; // ✅ direct use (no need ObjectId)
+      filter.buyerId = buyerId;
     }
 
     if (sellerId) {
@@ -56,12 +63,11 @@ const getAllOffers = async (req, res) => {
       .populate("buyerId")
       .populate("sellerId")
       .populate("carId")
-      .sort({created: -1})  // latest offer sabse uper aayega...
- 
+      .sort({ createdAt: -1 });
+
     res.status(200).json({
       data: offers
     });
-
   } catch (err) {
     console.log("GET OFFERS ERROR:", err);
     res.status(500).json({
@@ -69,6 +75,7 @@ const getAllOffers = async (req, res) => {
     });
   }
 };
+
 // ================= GET SINGLE OFFER =================
 const getOfferById = async (req, res) => {
   try {
@@ -85,7 +92,6 @@ const getOfferById = async (req, res) => {
       message: "Offer fetched",
       data: offer
     });
-
   } catch (err) {
     res.status(500).json({
       message: err.message
@@ -96,14 +102,24 @@ const getOfferById = async (req, res) => {
 // ================= UPDATE OFFER =================
 const updateOffer = async (req, res) => {
   try {
+    const { status, counterOffer, actionBy } = req.body;
 
-    const { status, counterOffer } = req.body;
+    const existingOffer = await Offer.findById(req.params.id)
+      .populate("buyerId")
+      .populate("sellerId")
+      .populate("carId");
+
+    if (!existingOffer) {
+      return res.status(404).json({
+        message: "Offer not found"
+      });
+    }
 
     let updateData = {
       updatedAt: Date.now()
     };
 
-    // ✅ status update
+    // Status update
     if (status) {
       if (!["pending", "accepted", "rejected"].includes(status)) {
         return res.status(400).json({
@@ -113,10 +129,10 @@ const updateOffer = async (req, res) => {
       updateData.status = status;
     }
 
-    // ✅ counter offer update
+    // Counter offer update by seller
     if (counterOffer) {
       updateData.counterOffer = counterOffer;
-      updateData.status = "pending"; // 🔥 important
+      updateData.status = "pending";
     }
 
     const offer = await Offer.findByIdAndUpdate(
@@ -125,19 +141,80 @@ const updateOffer = async (req, res) => {
       { new: true }
     );
 
+    // Notify buyer when seller sends a counter offer
+    if (counterOffer && actionBy === "seller") {
+      await createNotification({
+        userId: existingOffer.buyerId._id,
+        senderId: existingOffer.sellerId._id,
+        carId: existingOffer.carId._id,
+        offerId: existingOffer._id,
+        type: "counter_offer",
+        title: "Counter Offer Received",
+        message: `Seller has sent a counter offer of Rs. ${counterOffer} for ${existingOffer.carId.brand} ${existingOffer.carId.model}.`
+      });
+    }
+
+    // Notify buyer when seller accepts or rejects direct offer
+    if (status === "accepted" && actionBy === "seller") {
+      await createNotification({
+        userId: existingOffer.buyerId._id,
+        senderId: existingOffer.sellerId._id,
+        carId: existingOffer.carId._id,
+        offerId: existingOffer._id,
+        type: "offer_accepted",
+        title: "Offer Accepted",
+        message: `Your offer for ${existingOffer.carId.brand} ${existingOffer.carId.model} has been accepted by the seller.`
+      });
+    }
+
+    if (status === "rejected" && actionBy === "seller") {
+      await createNotification({
+        userId: existingOffer.buyerId._id,
+        senderId: existingOffer.sellerId._id,
+        carId: existingOffer.carId._id,
+        offerId: existingOffer._id,
+        type: "offer_rejected",
+        title: "Offer Rejected",
+        message: `Your offer for ${existingOffer.carId.brand} ${existingOffer.carId.model} has been rejected by the seller.`
+      });
+    }
+
+    // Notify seller when buyer accepts or rejects counter offer
+    if (status === "accepted" && actionBy === "buyer") {
+      await createNotification({
+        userId: existingOffer.sellerId._id,
+        senderId: existingOffer.buyerId._id,
+        carId: existingOffer.carId._id,
+        offerId: existingOffer._id,
+        type: "counter_response",
+        title: "Buyer Accepted Counter Offer",
+        message: `Buyer accepted your counter offer for ${existingOffer.carId.brand} ${existingOffer.carId.model}.`
+      });
+    }
+
+    if (status === "rejected" && actionBy === "buyer") {
+      await createNotification({
+        userId: existingOffer.sellerId._id,
+        senderId: existingOffer.buyerId._id,
+        carId: existingOffer.carId._id,
+        offerId: existingOffer._id,
+        type: "counter_response",
+        title: "Buyer Rejected Counter Offer",
+        message: `Buyer rejected your counter offer for ${existingOffer.carId.brand} ${existingOffer.carId.model}.`
+      });
+    }
+
     res.status(200).json({
       message: "Offer updated",
       data: offer
     });
-
   } catch (err) {
+    console.log("UPDATE OFFER ERROR:", err);
     res.status(500).json({
       message: err.message
     });
   }
 };
-
-
 
 // ================= DELETE OFFER =================
 const deleteOffer = async (req, res) => {
@@ -147,7 +224,6 @@ const deleteOffer = async (req, res) => {
     res.status(200).json({
       message: "Offer deleted"
     });
-
   } catch (err) {
     res.status(500).json({
       message: err.message

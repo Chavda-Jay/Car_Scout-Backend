@@ -18,6 +18,9 @@ app.use("/car",carRoutes)
 const offerRoutes = require("./src/routes/OfferRoutes")
 app.use("/offer",offerRoutes)
 
+const notificationRoutes = require("./src/routes/NotificationRoutes");
+app.use("/notification", notificationRoutes);
+
 const messageRoutes = require("./src/routes/MessageRoutes")
 app.use("/message",messageRoutes)
 
