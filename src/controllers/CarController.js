@@ -5,7 +5,7 @@ const Car = require("../models/CarModel");
 const createCar = async (req, res) => {
   try {
     console.log("BODY:", req.body);
-    console.log("FILES:", req.files); // Multiple files
+    console.log("FILES:", req.files);
 
     const {
       brand,
@@ -17,6 +17,7 @@ const createCar = async (req, res) => {
       description,
       location,
       sellerId,
+      condition,
     } = req.body;
 
     if (!sellerId) {
@@ -25,11 +26,9 @@ const createCar = async (req, res) => {
 
     let imageUrls = [];
 
-    // Multiple Image URL Array
-    const imageUrl = []
     if (req.files && req.files.length > 0) {
       for (let file of req.files) {
-        imageUrls.push(file.path); // cloudinary url or local path
+        imageUrls.push(file.path);
       }
     }
 
@@ -43,6 +42,7 @@ const createCar = async (req, res) => {
       description,
       location,
       sellerId,
+      condition,
       images: imageUrls,
     });
 
@@ -59,8 +59,7 @@ const createCar = async (req, res) => {
 // ================= GET ALL CARS =================
 const getAllCars = async (req, res) => {
   try {
-    const cars = await carSchema.find().populate("sellerId","_id name email")
-   // const cars = await Car.find().populate("sellerId", "_id name email");  //populate sellerId
+    const cars = await carSchema.find().populate("sellerId", "_id name email");
 
     res.status(200).json({
       message: "Cars fetched",
@@ -72,94 +71,62 @@ const getAllCars = async (req, res) => {
 };
 
 // ================= GET SINGLE CAR =================
-const getCarById = async(req,res)=>{
-  try{
-    // 🔹 make sure sellerId populate ho
-    const car = await carSchema.findById(req.params.id).populate("sellerId")
-    // const car = await Car.findById(req.params.id) .populate("sellerId"); // important
+const getCarById = async (req, res) => {
+  try {
+    const car = await carSchema.findById(req.params.id).populate("sellerId");
 
-   // if(!car) return res.status(404).json({ message: "Car not found" });
+    if (!car) {
+      return res.status(404).json({ message: "Car not found" });
+    }
 
     res.status(200).json({
-      message:"Car fetched",
-      data:car
-    })
-  }catch(err){
-    res.status(500).json({ message:err.message })
+      message: "Car fetched",
+      data: car,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
-}
-
+};
 
 // ================= UPDATE CAR =================
- const updateCar = async (req, res) => {
-   try {
-    let updateData = req.body;
+const updateCar = async (req, res) => {
+  try {
+    const existingCar = await Car.findById(req.params.id);
 
-     if (req.files && req.files.length > 0) {
-      let imageUrls = [];
-      for (let file of req.files) {
-         imageUrls.push(file.path);
-       }
-       updateData.images = imageUrls; // replace images
-     }
+    if (!existingCar) {
+      return res.status(404).json({ message: "Car not found" });
+    }
 
-      const car = await carSchema.findByIdAndUpdate(req.params.id,updateData,
-      { returnDocument: "after" }
-    );
-//     const car = await Car.findByIdAndUpdate(req.params.id, updateData, {
-//       returnDocument: "after",
-//     });
+    let updateData = { ...req.body };
+
+    // Keep old images and append new uploaded images
+    let updatedImages = existingCar.images || [];
+
+    if (req.files && req.files.length > 0) {
+      const newImageUrls = req.files.map((file) => file.path);
+      updatedImages = [...updatedImages, ...newImageUrls];
+    }
+
+    updateData.images = updatedImages;
+
+    const car = await Car.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+    });
 
     res.status(200).json({
-      message: "Car updated",
-       data: car,
-});
-} catch (err) {
-     res.status(500).json({ message: err.message });
-   }
- };
-
-// const updateCar = async (req, res) => {
-//   try {
-//     let updateData = req.body;
-
-//     // 🔥 IMPORTANT: old images fetch karo
-//     const existingCar = await Car.findById(req.params.id);
-
-//     let imageUrls = existingCar.images || [];
-
-//     // 🔥 agar new images aaye to replace karo
-//     if (req.files && req.files.length > 0) {
-//       imageUrls = [];
-
-//       for (let file of req.files) {
-//         imageUrls.push(file.path);
-//       }
-//     }
-
-//     updateData.images = imageUrls;
-
-//     const car = await Car.findByIdAndUpdate(req.params.id, updateData, {
-//       new: true, // ✅ correct option
-//     });
-
-//     res.status(200).json({
-//       message: "Car updated",
-//       data: car,
-//     });
-//   } catch (err) {
-//     console.log("UPDATE ERROR:", err); // 🔥 debug add karo
-//     res.status(500).json({ message: err.message });
-//   }
-// };
+      message: "Car updated successfully",
+      data: car,
+    });
+  } catch (err) {
+    console.log("UPDATE CAR ERROR:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
 
 // ================= DELETE CAR =================
-
-//=======Delete Car ===========
 const deleteCar = async (req, res) => {
   try {
-    //await Car.findByIdAndDelete(req.params.id);
-    await carSchema.findByIdAndDelete(req.params.id)
+    await carSchema.findByIdAndDelete(req.params.id);
 
     res.status(200).json({ message: "Car deleted" });
   } catch (err) {

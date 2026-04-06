@@ -76,7 +76,7 @@ const mailSend = async (to, subject, htmlContent) => {
     });
 
     const mailOptions = {
-      from: `"CarScout 🚗" <${process.env.EMAIL_USER}>`,
+      from: `"CarScout Team" <${process.env.EMAIL_USER}>`,
       to: to,
       subject: subject,
       html: htmlContent
@@ -85,7 +85,6 @@ const mailSend = async (to, subject, htmlContent) => {
     const info = await transporter.sendMail(mailOptions);
     console.log("Mail sent successfully:", info.response);
     return info;
-
   } catch (err) {
     console.log("Mail send error:", err.message);
     throw err;
