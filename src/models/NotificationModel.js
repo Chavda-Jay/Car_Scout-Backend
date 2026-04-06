@@ -26,7 +26,11 @@ const notificationSchema = new Schema({
       "offer_accepted",
       "offer_rejected",
       "counter_offer",
-      "counter_response"
+      "counter_response",
+      "test_drive_request",
+      "test_drive_accepted",
+      "test_drive_rejected",
+      "test_drive_completed"
     ],
     required: true
   },
