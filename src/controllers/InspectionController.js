@@ -112,7 +112,7 @@ const updateInspection = async (req, res) => {
     const inspection = await Inspection.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true }
+     { returnDocument: "after" }
     ).populate("carId");
 
     if (!inspection) {

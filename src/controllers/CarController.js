@@ -110,7 +110,7 @@ const updateCar = async (req, res) => {
     updateData.images = updatedImages;
 
     const car = await Car.findByIdAndUpdate(req.params.id, updateData, {
-      new: true,
+      returnDocument: "after",
     });
 
     res.status(200).json({

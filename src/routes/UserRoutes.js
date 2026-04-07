@@ -1,15 +1,26 @@
-const router = require("express").Router()
-const userController = require("../controllers/UserController")
-router.post("/register",userController.registerUser)  //localhost:3800/user/register
-router.post("/login",userController.loginUser)   
+const router = require("express").Router();
+const userController = require("../controllers/UserController");
+const profileUpload = require("../middleware/ProfileUpload");
 
-router.post("/forgotpassword",userController.forgotPassword)
-router.put("/resetpassword/:token",userController.resetpassword)
+router.post("/register", userController.registerUser);
+router.post("/login", userController.loginUser);
 
-// 🔹 NEW ADMIN ROUTES
-router.get("/users", userController.getAllUsers);          // fetch all users
-router.get("/:id", userController.getUserById);           // get single user
-router.put("/:id", userController.updateUser);            // update user
-router.delete("/:id", userController.deleteUser);         // delete user
+router.post("/forgotpassword", userController.forgotPassword);
+router.put("/resetpassword/:token", userController.resetpassword);
 
-module.exports=router   
+// Profile picture update
+router.put(
+  "/profile-pic/:id",
+  profileUpload.single("profilePic"),
+  userController.updateProfilePic
+);
+
+router.put("/remove-profile-pic/:id", userController.removeProfilePic);
+
+// Admin routes
+router.get("/users", userController.getAllUsers);
+router.get("/:id", userController.getUserById);
+router.put("/:id", userController.updateUser);
+router.delete("/:id", userController.deleteUser);
+
+module.exports = router;

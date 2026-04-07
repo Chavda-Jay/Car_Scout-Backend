@@ -162,7 +162,7 @@ const updateTestDrive = async (req, res) => {
     const testDrive = await TestDrive.findByIdAndUpdate(
       req.params.id,
       updateData,
-      { new: true }
+      { returnDocument: "after" }
     )
       .populate("buyerId", "firstName lastName email")
       .populate("sellerId", "firstName lastName email")

@@ -138,7 +138,7 @@ const updateOffer = async (req, res) => {
     const offer = await Offer.findByIdAndUpdate(
       req.params.id,
       updateData,
-      { new: true }
+     { returnDocument: "after" }
     );
 
     // Notify buyer when seller sends a counter offer

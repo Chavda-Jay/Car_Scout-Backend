@@ -16,23 +16,6 @@ const getWelcomeEmailTemplate = ({ firstName, lastName, role }) => {
             <table width="100%" cellpadding="0" cellspacing="0" style="max-width:700px; background:#ffffff; border-radius:22px; overflow:hidden; box-shadow:0 20px 50px rgba(15,23,42,0.12);">
               
               <tr>
-                <td style="background:linear-gradient(135deg,#0f172a 0%,#111827 55%,#0b1120 100%); padding:36px 32px 28px; text-align:center;">
-                  <div style="display:inline-block; background:linear-gradient(135deg,#22d3ee 0%,#06b6d4 100%); color:#0f172a; font-size:24px; font-weight:bold; width:62px; height:62px; line-height:62px; border-radius:18px; text-align:center;">
-                    CS
-                  </div>
-
-                  <h1 style="margin:18px 0 0; color:#ffffff; font-size:32px; line-height:1.2; font-weight:800;">
-                    Welcome to CarScout
-                  </h1>
-
-                  <p style="margin:12px auto 0; max-width:470px; color:#cbd5e1; font-size:15px; line-height:1.8;">
-                    Your trusted marketplace to explore premium cars, book test drives,
-                    make offers, and manage your complete vehicle journey with confidence.
-                  </p>
-                </td>
-              </tr>
-
-              <tr>
                 <td style="padding:34px 32px 28px;">
                   <p style="margin:0; color:#0f172a; font-size:17px; font-weight:500;">
                     Hey <strong style="color:#111827;">${fullName}</strong>,
