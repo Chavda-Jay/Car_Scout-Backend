@@ -1,68 +1,66 @@
-const mongoose = require("mongoose")
-const Schema = mongoose.Schema
+const mongoose = require("mongoose");
+const Schema = mongoose.Schema;
 
 const carSchema = new Schema({
+  brand: {
+    type: String
+  },
 
-    brand:{ 
-        type:String 
-    },
+  model: {
+    type: String
+  },
 
-    model:{
-         type:String 
-        },
+  year: {
+    type: Number
+  },
 
-    year:{ 
-        type:Number 
-    },
+  price: {
+    type: Number
+  },
 
-    price:{
-         type:Number 
-        },
+  mileage: {
+    type: Number
+  },
 
-    mileage:{
-         type:Number
-         },
+  fuelType: {
+    type: String
+  },
 
-    fuelType:{
-         type:String
-         },
+  description: {
+    type: String
+  },
 
-    description:{
-         type:String 
-        },
+  location: {
+    type: String
+  },
 
-    location:{
-        type:String
-    },
+  condition: {
+    type: String,
+    enum: ["Excellent", "Good", "Fair"],
+    default: "Excellent"
+  },
 
-    condition:{
-        type:String,
-        enum:["Excellent","Good","Fair"],
-        default:"Excellent"
-    },
+  sellerId: {
+    type: mongoose.Types.ObjectId,
+    ref: "users"
+  },
 
-    sellerId:{
-        type:mongoose.Types.ObjectId,
-        ref:"users"
-    },
-    
-    images:[
-        {
-            type:String
-        }
-    ],  
-          
-    status:{
-        type:String,
-        enum:["available","sold"],
-        default:"available"
-    },
-     createdAt:{
-        type:Date,
-        default:Date.now
+  images: [
+    {
+      type: String
     }
+  ],
 
+  status: {
+    type: String,
+    enum: ["available", "reserved", "sold"],
+    default: "available"
+  },
 
-})
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
 
-module.exports = mongoose.model("cars",carSchema)
+module.exports = mongoose.model("cars", carSchema);

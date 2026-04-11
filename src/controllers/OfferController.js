@@ -102,7 +102,7 @@ const getOfferById = async (req, res) => {
 // ================= UPDATE OFFER =================
 const updateOffer = async (req, res) => {
   try {
-    const { status, counterOffer, actionBy } = req.body;
+    const { status, counterOffer, actionBy, tokenAmount } = req.body;
 
     const existingOffer = await Offer.findById(req.params.id)
       .populate("buyerId")
@@ -119,30 +119,31 @@ const updateOffer = async (req, res) => {
       updatedAt: Date.now()
     };
 
-    // Status update
-    if (status) {
-      if (!["pending", "accepted", "rejected"].includes(status)) {
+    if (counterOffer !== undefined && actionBy === "seller") {
+      if (!tokenAmount || tokenAmount < 10000) {
         return res.status(400).json({
-          message: "Invalid status"
+          message: "Token amount must be at least Rs. 10000"
         });
       }
-      updateData.status = status;
-    }
 
-    // Counter offer update by seller
-    if (counterOffer) {
+      if (tokenAmount > counterOffer * 0.1) {
+        return res.status(400).json({
+          message: "Token amount cannot exceed 10% of counter offer"
+        });
+      }
+
       updateData.counterOffer = counterOffer;
-      updateData.status = "pending";
-    }
+      updateData.tokenAmount = tokenAmount;
+      updateData.agreedPrice = null;
+      updateData.status = "countered";
+      updateData.paymentStatus = "not_required";
 
-    const offer = await Offer.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-     { returnDocument: "after" }
-    );
+      const offer = await Offer.findByIdAndUpdate(
+        req.params.id,
+        updateData,
+        { returnDocument: "after" }
+      );
 
-    // Notify buyer when seller sends a counter offer
-    if (counterOffer && actionBy === "seller") {
       await createNotification({
         userId: existingOffer.buyerId._id,
         senderId: existingOffer.sellerId._id,
@@ -150,37 +151,72 @@ const updateOffer = async (req, res) => {
         offerId: existingOffer._id,
         type: "counter_offer",
         title: "Counter Offer Received",
-        message: `Seller has sent a counter offer of Rs. ${counterOffer} for ${existingOffer.carId.brand} ${existingOffer.carId.model}.`
+        message: `Seller has sent a counter offer of Rs. ${counterOffer} with token amount Rs. ${tokenAmount} for ${existingOffer.carId.brand} ${existingOffer.carId.model}.`
+      });
+
+      return res.status(200).json({
+        message: "Counter offer updated",
+        data: offer
       });
     }
 
-    // Notify buyer when seller accepts or rejects direct offer
     if (status === "accepted" && actionBy === "seller") {
+      if (!tokenAmount || tokenAmount < 10000) {
+        return res.status(400).json({
+          message: "Token amount must be at least Rs. 10000"
+        });
+      }
+
+      if (tokenAmount > existingOffer.offerPrice * 0.1) {
+        return res.status(400).json({
+          message: "Token amount cannot exceed 10% of offer price"
+        });
+      }
+
+      updateData.status = "accepted";
+      updateData.agreedPrice = existingOffer.offerPrice;
+      updateData.tokenAmount = tokenAmount;
+      updateData.paymentStatus = "pending";
+
+      const offer = await Offer.findByIdAndUpdate(
+        req.params.id,
+        updateData,
+        { returnDocument: "after" }
+      );
+
       await createNotification({
         userId: existingOffer.buyerId._id,
         senderId: existingOffer.sellerId._id,
         carId: existingOffer.carId._id,
         offerId: existingOffer._id,
-        type: "offer_accepted",
+        type: "token_requested",
         title: "Offer Accepted",
-        message: `Your offer for ${existingOffer.carId.brand} ${existingOffer.carId.model} has been accepted by the seller.`
+        message: `Your offer for ${existingOffer.carId.brand} ${existingOffer.carId.model} has been accepted. Please pay token amount of Rs. ${tokenAmount}.`
+      });
+
+      return res.status(200).json({
+        message: "Offer accepted with token amount",
+        data: offer
       });
     }
 
-    if (status === "rejected" && actionBy === "seller") {
-      await createNotification({
-        userId: existingOffer.buyerId._id,
-        senderId: existingOffer.sellerId._id,
-        carId: existingOffer.carId._id,
-        offerId: existingOffer._id,
-        type: "offer_rejected",
-        title: "Offer Rejected",
-        message: `Your offer for ${existingOffer.carId.brand} ${existingOffer.carId.model} has been rejected by the seller.`
-      });
-    }
-
-    // Notify seller when buyer accepts or rejects counter offer
     if (status === "accepted" && actionBy === "buyer") {
+      if (!existingOffer.counterOffer || !existingOffer.tokenAmount) {
+        return res.status(400).json({
+          message: "Counter offer or token amount not found"
+        });
+      }
+
+      updateData.status = "accepted";
+      updateData.agreedPrice = existingOffer.counterOffer;
+      updateData.paymentStatus = "pending";
+
+      const offer = await Offer.findByIdAndUpdate(
+        req.params.id,
+        updateData,
+        { returnDocument: "after" }
+      );
+
       await createNotification({
         userId: existingOffer.sellerId._id,
         senderId: existingOffer.buyerId._id,
@@ -188,25 +224,66 @@ const updateOffer = async (req, res) => {
         offerId: existingOffer._id,
         type: "counter_response",
         title: "Buyer Accepted Counter Offer",
-        message: `Buyer accepted your counter offer for ${existingOffer.carId.brand} ${existingOffer.carId.model}.`
+        message: `Buyer accepted your counter offer for ${existingOffer.carId.brand} ${existingOffer.carId.model}. Waiting for token payment of Rs. ${existingOffer.tokenAmount}.`
       });
-    }
 
-    if (status === "rejected" && actionBy === "buyer") {
       await createNotification({
-        userId: existingOffer.sellerId._id,
-        senderId: existingOffer.buyerId._id,
+        userId: existingOffer.buyerId._id,
+        senderId: existingOffer.sellerId._id,
         carId: existingOffer.carId._id,
         offerId: existingOffer._id,
-        type: "counter_response",
-        title: "Buyer Rejected Counter Offer",
-        message: `Buyer rejected your counter offer for ${existingOffer.carId.brand} ${existingOffer.carId.model}.`
+        type: "token_requested",
+        title: "Counter Offer Accepted",
+        message: `You accepted the seller's counter offer. Please pay token amount of Rs. ${existingOffer.tokenAmount}.`
+      });
+
+      return res.status(200).json({
+        message: "Counter offer accepted",
+        data: offer
       });
     }
 
-    res.status(200).json({
-      message: "Offer updated",
-      data: offer
+    if (status === "rejected") {
+      updateData.status = "rejected";
+
+      const offer = await Offer.findByIdAndUpdate(
+        req.params.id,
+        updateData,
+        { returnDocument: "after" }
+      );
+
+      if (actionBy === "seller") {
+        await createNotification({
+          userId: existingOffer.buyerId._id,
+          senderId: existingOffer.sellerId._id,
+          carId: existingOffer.carId._id,
+          offerId: existingOffer._id,
+          type: "offer_rejected",
+          title: "Offer Rejected",
+          message: `Your offer for ${existingOffer.carId.brand} ${existingOffer.carId.model} has been rejected by the seller.`
+        });
+      }
+
+      if (actionBy === "buyer") {
+        await createNotification({
+          userId: existingOffer.sellerId._id,
+          senderId: existingOffer.buyerId._id,
+          carId: existingOffer.carId._id,
+          offerId: existingOffer._id,
+          type: "counter_response",
+          title: "Buyer Rejected Counter Offer",
+          message: `Buyer rejected your counter offer for ${existingOffer.carId.brand} ${existingOffer.carId.model}.`
+        });
+      }
+
+      return res.status(200).json({
+        message: "Offer rejected",
+        data: offer
+      });
+    }
+
+    return res.status(400).json({
+      message: "Invalid offer update request"
     });
   } catch (err) {
     console.log("UPDATE OFFER ERROR:", err);
@@ -215,6 +292,7 @@ const updateOffer = async (req, res) => {
     });
   }
 };
+
 
 // ================= DELETE OFFER =================
 const deleteOffer = async (req, res) => {

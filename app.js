@@ -18,6 +18,9 @@ app.use("/car",carRoutes)
 const offerRoutes = require("./src/routes/OfferRoutes")
 app.use("/offer",offerRoutes)
 
+const paymentRoutes = require("./src/routes/PaymentRoutes")
+app.use("/payment",paymentRoutes)
+
 const notificationRoutes = require("./src/routes/NotificationRoutes");
 app.use("/notification", notificationRoutes);
 
